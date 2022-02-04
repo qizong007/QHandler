@@ -1,6 +1,8 @@
 package qhandler
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -13,11 +15,20 @@ type node struct {
 	isWild   bool    // 是否精确匹配，part 含有 : 或 * 时为true
 }
 
-// 第一个匹配成功的节点，用于[插入]
-func (n *node) matchChild(part string) *node {
+// 寻找第一个模糊匹配的节点，用于[插入]
+func (n *node) findWildChild(part string) *node {
 	for _, child := range n.children {
-		// 成功匹配
-		if child.part == part || child.isWild {
+		if child.isWild {
+			return child
+		}
+	}
+	return nil
+}
+
+// 寻找第一个精确匹配的节点，用于[插入]
+func (n *node) findSpecificChild(part string) *node {
+	for _, child := range n.children {
+		if child.part == part {
 			return child
 		}
 	}
@@ -41,9 +52,14 @@ func (n *node) insert(pattern string, parts []string, height int) {
 		n.pattern = pattern
 		return
 	}
-
 	part := parts[height]
-	child := n.matchChild(part)
+	// 解决模糊匹配节点的冲突问题
+	child := n.findWildChild(part)
+	if child != nil && child.isWild && (part[0] == ':' || part[0] == '*') {
+		panic(fmt.Sprintf("now %s(in %s) is conflict with %s", part, pattern, child.part))
+	}
+	// 再找一遍有没有其他节点，没有的话就插入
+	child = n.findSpecificChild(part)
 	if child == nil {
 		child = &node{part: part, isWild: part[0] == ':' || part[0] == '*'}
 		n.children = append(n.children, child)
@@ -71,4 +87,26 @@ func (n *node) search(parts []string, height int) *node {
 	}
 
 	return nil
+}
+
+// 优先级保证 eg. /18 > /:age
+func (n *node) sort() {
+	if n == nil {
+		return
+	}
+	list := n.children
+	sort.Slice(n.children, func(i, j int) bool {
+		if !n.children[i].isWild &&  n.children[j].isWild {
+			return true
+		} else if n.children[i].isWild && !n.children[j].isWild {
+			return false
+		} else {
+			return len(n.children[i].pattern) < len(n.children[j].pattern)
+		}
+	})
+	if list != nil && len(list) > 0 {
+		for i := range list {
+			list[i].sort()
+		}
+	}
 }

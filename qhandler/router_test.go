@@ -10,8 +10,8 @@ func newTestRouter() *router {
 	r := newRouter()
 	r.addRoute("GET", "/", nil)
 	r.addRoute("GET", "/hello/:name", nil)
+	r.addRoute("GET", "/hello/b", nil)
 	r.addRoute("GET", "/hello/b/c", nil)
-	r.addRoute("GET", "/hi/:name", nil)
 	r.addRoute("GET", "/assets/*filepath", nil)
 	r.addRoute("GET", "/*assets/*filepath", nil)
 	return r
@@ -44,4 +44,33 @@ func TestGetRoute(t *testing.T) {
 
 	fmt.Printf("matched path: %s, params['name']: %s\n", n.pattern, ps["name"])
 
+}
+
+func printNode(n *node, h int) {
+	if n == nil {
+		return
+	}
+	fmt.Printf("%p ", n)
+	fmt.Println(h, n)
+	list := n.children
+	if list != nil && len(list) > 0 {
+		for i := range list {
+			printNode(list[i], h+1)
+		}
+	}
+}
+
+func TestTrie(t *testing.T) {
+	r := newTestRouter()
+	for _, root := range r.roots {
+		fmt.Println("=================================")
+		printNode(root, 0)
+		fmt.Println("=================================")
+	}
+	n1, m1 := r.getRoute("GET", "/hello/b")
+	fmt.Println(n1, m1)
+	n2, m2 := r.getRoute("GET", "/hello/wq")
+	fmt.Println(n2, m2)
+	n3, m3 := r.getRoute("GET", "/hello/b/c")
+	fmt.Println(n3, m3)
 }
