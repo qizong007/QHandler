@@ -96,7 +96,7 @@ func (n *node) sort() {
 	}
 	list := n.children
 	sort.Slice(n.children, func(i, j int) bool {
-		if !n.children[i].isWild &&  n.children[j].isWild {
+		if !n.children[i].isWild && n.children[j].isWild {
 			return true
 		} else if n.children[i].isWild && !n.children[j].isWild {
 			return false
