@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 )
 
 type router struct {
@@ -78,15 +77,15 @@ func (r *router) getRoute(method string, path string) (*node, map[string]string)
 
 // 处理函数（真正执行）
 func (r *router) handle(c *Context) {
-	start := time.Now()
 	n, params := r.getRoute(c.Method, c.Path)
 	if n != nil {
-		c.Params = params
 		key := c.Method + "-" + n.pattern
-		r.handlers[key](c)
+		c.Params = params
+		c.handlers = append(c.handlers, r.handlers[key])
 	} else {
-		c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		c.handlers = append(c.handlers, func(c *Context) {
+			c.String(http.StatusNotFound, "404 NOT FOUND: %s\n", c.Path)
+		})
 	}
-	// 计时
-	log.Println("[QHandler]", c.Path, "=> cost time:", time.Since(start))
+	c.Next()
 }
